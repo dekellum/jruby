@@ -22,7 +22,13 @@ module Gem
 
     alias_method :original_default_path, :default_path
     def default_path
-      paths = original_default_path
+      prop = Java::java.lang.System.get_property("jruby.gem.path")
+      if prop
+        paths = prop.split(':')
+      else
+        paths = original_default_path
+      end
+
       @jar_paths = paths.select {|p| jarred_path? p }
       paths.reject {|p| jarred_path? p }
     end
@@ -51,7 +57,9 @@ module Gem
   # JRuby: We don't want gems installed in lib/jruby/gems, but rather
   # to preserve the old location: lib/ruby/gems.
   def self.default_dir
-    File.join ConfigMap[:libdir], 'ruby', 'gems', '1.8'
+    prop = Java::java.lang.System.get_property("jruby.gem.home")
+    prop ||= File.join(ConfigMap[:libdir], 'ruby', 'gems', '1.8')
+    prop
   end
 
   ##
