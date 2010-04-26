@@ -166,24 +166,36 @@ public class JavaObject extends RubyObject {
     @JRubyMethod
     @Override
     public IRubyObject to_s() {
-        Object dataStruct = dataGetStruct();
+        return to_s(getRuntime(), dataGetStruct());
+    }
+
+    public static IRubyObject to_s(Ruby runtime, Object dataStruct) {
         if (dataStruct != null) {
             String stringValue = dataStruct.toString();
             if (stringValue != null) {
-                return RubyString.newUnicodeString(getRuntime(), dataStruct.toString());
+                return RubyString.newUnicodeString(runtime, dataStruct.toString());
             }
 
-            return getRuntime().getNil();
+            return runtime.getNil();
         }
-        return RubyString.newEmptyString(getRuntime());
+        return RubyString.newEmptyString(runtime);
     }
 
     @JRubyMethod(name = {"==", "eql?"}, required = 1)
     public IRubyObject op_equal(IRubyObject other) {
-        Ruby runtime = getRuntime();
         Object myValue = getValue();
+        return opEqualShared(myValue, other);
+    }
+
+    public static IRubyObject op_equal(JavaProxy self, IRubyObject other) {
+        Object myValue = self.getObject();
+        return opEqualShared(myValue, other);
+    }
+
+    private static IRubyObject opEqualShared(Object myValue, IRubyObject other) {
+        Ruby runtime = other.getRuntime();
         Object otherValue = getWrappedObject(other, NEVER);
-        
+
         if (other == NEVER) {
             // not a wrapped object
             return runtime.getFalse();
@@ -268,6 +280,12 @@ public class JavaObject extends RubyObject {
         }
     }
     
+    public static IRubyObject ruby_synchronized(ThreadContext context, Object lock, Block block) {
+        synchronized (lock != null ? lock : NULL_LOCK) {
+            return block.yield(context, null);
+        }
+    }
+    
     @JRubyMethod(frame = true)
     public IRubyObject marshal_dump() {
         if (Serializable.class.isAssignableFrom(getJavaClass())) {
@@ -313,7 +331,8 @@ public class JavaObject extends RubyObject {
         if (cls.isAssignableFrom(getValue().getClass())) {
             return getValue();
         }
-        throw getRuntime().newTypeError("cannot convert instance of " + getValue().getClass() + " to " + cls);
+        
+        return super.toJava(cls);
     }
 
     private static final ObjectAllocator JAVA_OBJECT_ALLOCATOR = new ObjectAllocator() {

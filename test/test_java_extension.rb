@@ -104,6 +104,28 @@ class TestJavaExtension < Test::Unit::TestCase
     end
   end
 
+=begin See JRUBY-4677 for explanation of why this doesn't work yet
+  def test_catch_unwrapped_java_exception_as_a_RubyException
+    begin
+      raise java.lang.NullPointerException.new
+    rescue Exception => e
+      assert e.is_a?(Exception)
+    end
+  end
+=end
+
+  def test_catch_unwrapped_java_exception_and_reraise
+    begin
+      raise java.lang.NullPointerException.new
+    rescue Exception => e
+      begin
+        raise # should not cause ClassCastException
+      rescue Exception => e
+        assert_equal java.lang.NullPointerException, e.class
+      end
+    end
+  end
+
   BLUE = "blue"
   GREEN = "green"
 
